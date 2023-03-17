@@ -197,7 +197,9 @@ jobs:
           name: Configure server
           command: |
             cd project/.circleci/ansible
-            ansible-playbook -i inventory.txt configure-server.yml
+            ls
+            pwd
+            ansible-playbook -i inventory.txt cofig.yml
       # Here's where you will add some code to rollback on failure      
 
 

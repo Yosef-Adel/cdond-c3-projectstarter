@@ -183,7 +183,7 @@ jobs:
           fingerprints: ["f9:ae:7c:60:fe:8d:7d:af:8c:4c:74:b9:50:65:db:07"]
       - attach_workspace:
           # Must be absolute path or relative path from working_directory
-          at:  ~/
+          at:  .
       - run:
           name: Install dependencies
           command: |
@@ -196,10 +196,12 @@ jobs:
       - run:
           name: Configure server
           command: |
-            cd project/.circleci/ansible
             ls
             pwd
-            ansible-playbook -i inventory.txt cofig.yml
+            cd project 
+            ls
+            
+            
       # Here's where you will add some code to rollback on failure      
 
 

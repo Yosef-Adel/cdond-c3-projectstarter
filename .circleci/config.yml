@@ -183,7 +183,7 @@ jobs:
           fingerprints: ["f9:ae:7c:60:fe:8d:7d:af:8c:4c:74:b9:50:65:db:07"]
       - attach_workspace:
           # Must be absolute path or relative path from working_directory
-          at: .
+          at:  ~/
       - run:
           name: Install dependencies
           command: |

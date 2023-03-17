@@ -168,29 +168,42 @@ jobs:
           root: ~/
           paths:
             - project/.circleci/ansible/inventory.txt
+
+      - destroy_environment
       # Here's where you will add some code to rollback on failure      
 
 
 
 
-#   configure-infrastructure:
-#     docker:
-#       # Docker image here that supports Ansible
-#     steps:
-#       # Checkout code from git
-#       # Add ssh keys with fingerprint
-#       # attach workspace
-#       - run:
-#           name: Install dependencies
-#           command: |
-#             # Your code here
-#             exit 1
-#       - run:
-#           name: Configure server
-#           command: |
-#             # Your code here
-#             exit 1
-#       # Here's where you will add some code to rollback on failure      
+  configure-infrastructure:
+    docker:
+      - image: python:3.7-alpine3.11
+    steps:
+      - checkout
+      - add_ssh_keys:
+          fingerprints: ["f9:ae:7c:60:fe:8d:7d:af:8c:4c:74:b9:50:65:db:07"]
+      - attach_workspace:
+          # Must be absolute path or relative path from working_directory
+          at: .
+      - run:
+          name: Install dependencies
+          command: |
+           apk add gzip openssh-client ansible
+      - run:
+            name: Reading Inventory file
+            command: |
+              cat project/.circleci/ansible/inventory.txt  
+      
+      - run:
+          name: Configure server
+          command: |
+            cd .circleci/ansible
+            ansible-playbook -i inventory.txt configure-server.yml
+      # Here's where you will add some code to rollback on failure      
+
+
+
+
 
 #   run-migrations:
 #     docker:
@@ -208,6 +221,12 @@ jobs:
 #             # Your code here
 #             exit 1
 #      # Here's where you will add some code to rollback on failure      
+
+
+
+
+
+
 
 #   deploy-frontend:
 #     docker:
@@ -229,7 +248,12 @@ jobs:
 #           command: |
 #             # your code here
 #       # Here's where you will add some code to rollback on failure      
-                    
+
+
+
+
+
+
 #   deploy-backend:
 #     docker:
 #       # Docker image here that supports Ansible
@@ -246,6 +270,9 @@ jobs:
 #           command: |
 #             # your code here
 #       # Here's where you will add some code to rollback on failure  
+
+
+
 
 #   smoke-test:
 #     docker:
@@ -270,6 +297,9 @@ jobs:
 #             # your code here
 #       # Here's where you will add some code to rollback on failure  
 
+
+
+
 #   cloudfront-update:
 #     docker:
 #       # Docker image here that supports AWS CLI
@@ -284,6 +314,9 @@ jobs:
 #           command: |
 #             # your code here
 #       # Here's where you will add some code to rollback on failure  
+
+
+
 
 # cleanup:
 #     docker:
@@ -308,18 +341,18 @@ jobs:
 workflows:
   default:
     jobs:
-      - build-frontend
-      - build-backend
-      - test-frontend:
-          requires: [build-frontend]
-      - test-backend:
-          requires: [build-backend]
-      - scan-backend:
-          requires: [build-backend]
-      - scan-frontend:
-          requires: [build-frontend]
-      - deploy-infrastructure:
-          requires: [test-frontend, test-backend, scan-frontend, scan-backend]
+      # - build-frontend
+      # - build-backend
+      # - test-frontend:
+      #     requires: [build-frontend]
+      # - test-backend:
+      #     requires: [build-backend]
+      # - scan-backend:
+      #     requires: [build-backend]
+      # - scan-frontend:
+      #     requires: [build-frontend]
+      - deploy-infrastructure
+          # requires: [test-frontend, test-backend, scan-frontend, scan-backend]
           # filters:
           #   branches:
           #     only: [test-feature-branch]

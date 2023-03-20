@@ -236,11 +236,7 @@ jobs:
     steps:
       - checkout
       - attach_workspace:
-          at: ~/
-      - run:
-          name: Install dependencies
-          command: |
-            yum -y install tar gzip   
+          at: ~/   
       - run:
           name: Get backend url
           command: |

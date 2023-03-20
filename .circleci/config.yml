@@ -382,10 +382,10 @@ workflows:
           #     only: [test-feature-branch]
       - configure-infrastructure:
           requires: [deploy-infrastructure]
-      - run-migrations
+      - run-migrations:
           requires: [configure-infrastructure]
 
-      - deploy-backend
+      - deploy-backend:
           requires: [run-migrations]
 
 

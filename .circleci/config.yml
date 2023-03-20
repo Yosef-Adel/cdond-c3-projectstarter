@@ -235,10 +235,6 @@ jobs:
       - image: yosefadel/aws-node
     steps:
       - checkout
-      - run:
-          name: Install tar utility
-          command: |
-            apt install -y tar gzip
       - attach_workspace:
           at: ~/
       - run:

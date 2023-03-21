@@ -17,11 +17,11 @@
     cd /home/ubuntu/backend
     npm i
 - name: Start the app
-  
+  become: true
   shell: |
     sudo pm2 stop default
     sudo pm2 start -f /home/ubuntu/backend/dist/main.js
-# - name: Enable pm2
-#   become: true
-#   shell: |
-#     sudo su -c "env PATH=$PATH:/usr/local/bin pm2 startup systemd -u ubuntu --hp /home/ubuntu"
+- name: Enable pm2
+  become: true
+  shell: |
+    sudo su -c "env PATH=$PATH:/usr/local/bin pm2 startup systemd -u ubuntu --hp /home/ubuntu"

@@ -12,16 +12,42 @@
     src: artifact.tar.gz
     dest: /home/ubuntu/backend
 
+- name: "update apt packages."
+  become: true
+  apt:
+    update_cache: yes
+
+- name: "upgrade packages"
+  become: true
+  apt:
+    upgrade: yes
+
+- name: remove dependencies that are no longer required
+  become: true
+  apt:
+    autoremove: yes
 - name: "Installing Node Dependencies"
   shell: |
     cd /home/ubuntu/backend
     npm i
-- name: Start the app
+- name: "install n"
   become: true
-  shell: |
-    sudo pm2 stop default
-    sudo pm2 start -f /home/ubuntu/backend/dist/main.js
-- name: Enable pm2
+  npm:
+    name: n
+    global: yes
+    production: yes
+
+- name: "install nodejs 13.8.0"
   become: true
-  shell: |
-    sudo su -c "env PATH=$PATH:/usr/local/bin pm2 startup systemd -u ubuntu --hp /home/ubuntu"
+  shell: n 13.8.0
+- name: "install pm2"
+  become: true
+  npm:
+    name: pm2
+    global: yes
+    production: yes
+    state: present
+
+- name: "Start application"
+  command:
+    cmd: pm2 start npm -- start

@@ -22,9 +22,6 @@
 
 
 
-- name: Stop the app
-  command:
-    cmd: sudo pm2 stop default
 
 
 - name: Start the app

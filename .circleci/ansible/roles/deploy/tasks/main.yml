@@ -25,7 +25,7 @@
 
 
 - name: "Start application"
-  command:
-    cmd: pm2 start npm -- start
-
+    shell: |
+      pm2 stop default
+      pm2 start -f /home/ubuntu/backend/dist/main.js
 

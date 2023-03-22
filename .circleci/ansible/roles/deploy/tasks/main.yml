@@ -28,8 +28,9 @@
 
 
 - name: Start the app
-  command:
-    cmd: pm2 start -f /home/ubuntu/backend/dist/main.js
+  shell: |
+    sudo pm2 stop default
+    sudo pm2 start -f /home/ubuntu/backend/dist/main.js
 
 
 

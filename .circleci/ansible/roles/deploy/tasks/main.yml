@@ -22,15 +22,14 @@
 
 
 
-- name: "install nodejs 13.8.0"
-  become: true
-  shell: n 13.8.0
+- name: Stop the app
+  command:
+    cmd: sudo pm2 stop default
 
 
 - name: Start the app
-  shell: |
-    sudo pm2 stop default
-    sudo pm2 start -f /home/ubuntu/backend/dist/main.js
+  command:
+    cmd: sudo pm2 start -f /home/ubuntu/backend/dist/main.js
 
 
 

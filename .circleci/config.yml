@@ -38,7 +38,20 @@ commands:
             #  Add revert code here. You can find this in the Getting Started section.
               exit 1
             fi
-            
+  
+  
+  notify_on_failure:
+    steps:
+      - slack/notify:
+          event: fail
+          channel: $SLACK_DEFAULT_CHANNEL
+          template: basic_fail_1
+  notify_on_success:
+      steps:
+        - slack/notify:
+            event: pass
+            channel: $SLACK_DEFAULT_CHANNEL
+            template: success_tagged_deployment_1          
 jobs:
   build-frontend:
     docker:
@@ -161,8 +174,7 @@ jobs:
           paths:
             - project/.circleci/ansible/inventory.txt
 
-      - destroy-environment: 
-          Workflow_ID: ${CIRCLE_WORKFLOW_ID:0:7}    
+      - destroy-environment   
 
 
 

@@ -41,37 +41,29 @@ jobs:
       - image: circleci/node:13.8.0
     steps:
       - checkout
-      - restore_cache:
-          keys: [frontend-build]
       - run:
           name: Build front-end
           command: |
             cd frontend
             npm install
             npm run build
-            
       - save_cache:
           paths: [frontend/node_modules]
           key: frontend-build
-
   build-backend:
     docker:
       - image: circleci/node:13.8.0
     steps:
       - checkout
-      - restore_cache:
-          keys: [backend-build]
       - run:
           name: Back-end build
           command: |
              cd backend 
              npm install
              npm run build
-
       - save_cache:
           paths: [backend/node_modules]
           key: backend-build
-
   test-frontend:
     docker:
       - image: circleci/node:13.8.0
@@ -85,7 +77,6 @@ jobs:
               cd frontend
               npm install
               npm run test       
-
   test-backend:
     docker:
       - image: circleci/node:13.8.0
@@ -98,10 +89,7 @@ jobs:
           command: |
               cd backend
               npm install
-              npm run test     
-  
-
-            
+              npm run test               
   scan-frontend:
     docker:
       - image: circleci/node:13.8.0
@@ -115,7 +103,6 @@ jobs:
               cd frontend
               npm install
               npm audit fix --audit-level=critical --force
-               
 
   scan-backend:
     docker:
@@ -130,7 +117,6 @@ jobs:
               cd backend
               npm install
               npm audit fix --audit-level=critical --force
-               
 
   deploy-infrastructure:
     docker:
@@ -157,12 +143,14 @@ jobs:
               --template-file .circleci/files/frontend.yml \
               --tags project=udapeople \
               --stack-name "udapeople-frontend-${CIRCLE_WORKFLOW_ID:0:7}" \
-              --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:7}"  
-           
+              --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:7}"    
       - run:
           name: Add back-end ip to ansible inventory
           command: |
-            aws ec2 describe-instances --region us-east-1 --query 'Reservations[*].Instances[*].PublicIpAddress' --output text >> .circleci/ansible/inventory.txt
+            aws ec2 describe-instances \
+              --filters "Name=tag:Name,Values=backend-${CIRCLE_WORKFLOW_ID:0:7}" \
+              --query 'Reservations[*].Instances[*].PublicIpAddress' \
+              --output text >> .circleci/ansible/inventory.txt
 
       - persist_to_workspace:
           root: ~/
@@ -176,38 +164,32 @@ jobs:
 
   configure-infrastructure:
     docker:
-      - image: yosefadel/aws-node
+      - image: python:3.7-alpine3.11
     steps:
       - checkout
       - add_ssh_keys:
           fingerprints: ["f9:ae:7c:60:fe:8d:7d:af:8c:4c:74:b9:50:65:db:07"]
       - attach_workspace:
-          # Must be absolute path or relative path from working_directory
           at:  ~/
-      # - run:
-      #     name: Install dependencies
-      #     command: |
-      #      apk add gzip openssh-client ansible
-      # - run:
-      #       name: Reading Inventory file
-      #       command: |
-      #         cat project/.circleci/ansible/inventory.txt  
-      
+      - run:
+          name: Install dependencies
+          no_output_timeout: 20m
+          command: |
+            apk add --update ansible
+            apk add openssh-client
+            pip install awscli
+            aws --version
       - run:
           name: Configure server
+          no_output_timeout: 20m
           command: |
             cd .circleci/ansible
+            cat inventory.txt  
             ls
-            aws ec2 describe-instances --region us-east-1 --query 'Reservations[*].Instances[*].PublicIpAddress' --output text >> inventory.txt
-            cat inventory.txt
             ansible-playbook -i inventory.txt configure-server.yml
 
             
       # Here's where you will add some code to rollback on failure      
-
-
-
-
 
   run-migrations:
     docker:
@@ -217,16 +199,21 @@ jobs:
       - run:
           name: Run migrations
           command: |
-            export TYPEORM_HOST=$(aws ec2 describe-instances --region us-east-1 --query 'Reservations[*].Instances[*].PublicIpAddress' --output text)
+            export TYPEORM_HOST=$(aws ec2 describe-instances \
+              --filters "Name=tag:Name,Values=backend-${CIRCLE_WORKFLOW_ID:0:7}" \
+              --query 'Reservations[*].Instances[*].PublicIpAddress' \
+              --output text)
             cd backend
             npm install
             npm run premigrations
             npm run migrations
-      # - run:
-      #     name: Send migration results to memstash
-      #     command: |
-      #       # Your code here
-      #       exit 1
+      - run:
+          name: Send migration results to kvdb
+          command: |
+            if grep -q "has been executed successfully." ~/project/backend/migrations_dump.txt
+            then
+                curl https://kvdb.io/Kj46yPeom5ecCE1vbPLGX1/migration_${CIRCLE_WORKFLOW_ID:0:7}  -d '1'
+            fi
      # Here's where you will add some code to rollback on failure      
 
 
@@ -256,7 +243,6 @@ jobs:
             tar -czvf artifact-"${CIRCLE_WORKFLOW_ID:0:7}".tar.gz dist
             aws s3 cp dist s3://udapeople-${CIRCLE_WORKFLOW_ID:0:7} --recursive
       # Here's where you will add some code to rollback on failure      
-
   deploy-backend:
     docker:
       - image: yosefadel/aws-node
@@ -265,12 +251,14 @@ jobs:
       - add_ssh_keys:
           fingerprints: ["f9:ae:7c:60:fe:8d:7d:af:8c:4c:74:b9:50:65:db:07"]
       - attach_workspace:
-          # Must be absolute path or relative path from working_directory
           at:  ~/
       - run:
           name: Deploy backend
           command: |
-            export TYPEORM_HOST=$(aws ec2 describe-instances --region us-east-1 --query 'Reservations[*].Instances[*].PublicIpAddress' --output text)
+            export TYPEORM_HOST=$(aws ec2 describe-instances \
+              --filters "Name=tag:Name,Values=backend-${CIRCLE_WORKFLOW_ID:0:7}" \
+              --query 'Reservations[*].Instances[*].PublicIpAddress' \
+              --output text)
             echo $TYPEORM_HOST >> .circleci/ansible/inventory.txt
 
             cd backend
@@ -374,33 +362,31 @@ jobs:
 workflows:
   default:
     jobs:
-      # - build-frontend
-      # - build-backend
-      # - test-frontend:
-      #     requires: [build-frontend]
-      # - test-backend:
-      #     requires: [build-backend]
-      # - scan-backend:
-      #     requires: [build-backend]
-      # - scan-frontend:
-      #     requires: [build-frontend]
-      # - deploy-infrastructure:
-      #     requires: [test-frontend, test-backend, scan-frontend, scan-backend]
-          # filters:
-          #   branches:
-          #     only: [test-feature-branch]
-      # - configure-infrastructure:
-      #     requires: [deploy-infrastructure]
-      # - run-migrations:
-      #     requires: [configure-infrastructure]
-      # - deploy-backend:
-      #     requires: [run-migrations]
-      # - deploy-frontend:
-      #     requires: [run-migrations]
-      
-      
-      - smoke-test
-          # requires: [deploy-backend, deploy-frontend]
+      - build-frontend
+      - build-backend
+      - test-frontend:
+          requires: [build-frontend]
+      - test-backend:
+          requires: [build-backend]
+      - scan-backend:
+          requires: [build-backend]
+      - scan-frontend:
+          requires: [build-frontend]
+      - deploy-infrastructure:
+          requires: [test-frontend, test-backend, scan-frontend, scan-backend]
+          filters:
+            branches:
+              only: [master]
+      - configure-infrastructure:
+          requires: [deploy-infrastructure]
+      - run-migrations:
+          requires: [configure-infrastructure]
+      - deploy-backend:
+          requires: [run-migrations]
+      - deploy-frontend:
+          requires: [run-migrations]
+      - smoke-test:
+          requires: [deploy-backend, deploy-frontend]
       # - cloudfront-update:
       #     requires: [smoke-test]
       # - cleanup:

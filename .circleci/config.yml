@@ -359,7 +359,7 @@ jobs:
 
   cleanup:
       docker:
-        - image: mareimorsy/aws-node
+        - image: yosefadel/aws-node
       steps:
         - checkout
         - run:
@@ -370,10 +370,6 @@ jobs:
               export STACKS=($(aws cloudformation list-stacks \
                   --query "StackSummaries[*].StackName" \
                   --stack-status-filter CREATE_COMPLETE --no-paginate --output text)) 
-              
-        - run:
-            name: Remove old stacks and files
-            command: |
               echo Stack names: "${STACKS[@]}"
               echo Old Workflow ID: $OldWorkflowID
               if [[ "${STACKS[@]}" =~ "${OldWorkflowID}" ]]

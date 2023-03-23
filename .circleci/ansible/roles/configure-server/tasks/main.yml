@@ -1,13 +1,8 @@
 ---
-- name: "update apt packages."
-  become: true
-  apt:
-    update_cache: yes
-
-- name: "upgrade packages."
-  become: true
-  apt:
-    upgrade: "yes"
+# - name: "upgrade packages."
+#   become: true
+#   apt:
+#     upgrade: "yes"
 
 - name: "install dependencies."
   become: true
@@ -24,6 +19,8 @@
     production: yes
     state: present
 
+
+
 - name: "install docker."
   become: true
   apt:
@@ -31,11 +28,26 @@
     state: latest
     update_cache: yes
 
+# Uncomment the following to enable insecure registries with Docker
+#- name: ensure docker can use insecure registries in 10.11.0.0/16
+#  lineinfile: "dest=/etc/default/docker regexp=^DOCKER_OPTS line=DOCKER_OPTS='--insecure-registry 10.11.0.0/16'"
+
+# sudo usermod -aG docker root
+# - name: "Add remote ubuntu user to docker group"
+#   user:
+#     name: ubuntu
+#     groups: docker
+#     append: yes
+#   become: true
+
 - name: sudo usermod -aG docker root
   become: True
   shell:
     cmd: "usermod -aG docker ubuntu"
     chdir: .
+
+# - service: name=docker state=restarted
+#
 
 
 - name: Install docker-compose
@@ -47,7 +59,7 @@
 
 - copy:
     src: /home/circleci/project/util/docker-compose.yml
-    dest: /home/ubuntu
+    dest: /home/ubuntu/
 
 - name: Run PostgresQL DB
   become: True

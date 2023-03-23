@@ -7,32 +7,52 @@ commands:
   destroy-environment:
     description: Destroy back-end and front-end cloudformation stacks given a workflow ID.
     parameters:
-      # Add parameter here   
+      workflow_id:
+        type: string 
+        default: ${CIRCLE_WORKFLOW_ID:0:5}   
     steps:
       - run:
           name: Destroy environments
           when: on_fail
           command: |
-            # Your code here
-            exit 1
-
+            echo "Destroying environment: ${CIRCLE_WORKFLOW_ID:0:7} "
+            aws cloudformation delete-stack --stack-name backend-${CIRCLE_WORKFLOW_ID:0:5}
+            aws s3 rm s3://udapeople-<<parameters.Workflow_ID>> --recursive
+            aws cloudformation delete-stack --stack-name frontend-${CIRCLE_WORKFLOW_ID:0:7}
+  
+  notify_on_failure:
+      steps:
+        - slack/notify:
+            event: fail
+            channel: $SLACK_DEFAULT_CHANNEL
+            template: basic_fail_1
+  
+  notify_on_success:
+      steps:
+        - slack/notify:
+            event: pass
+            channel: $SLACK_DEFAULT_CHANNEL
+            template: success_tagged_deployment_1
+  
   revert-migrations:
     description: Revert the last migration if successfully run in the current workflow.
     parameters:
-      # Add parameter here     
+      Workflow_ID:
+        type: string
+        default: ${CIRCLE_WORKFLOW_ID:0:7}    
     steps:
       - run:
           name: Revert migrations
-          # Add when this will run
+          when: on_fail
           command: |
-            # Curl command here to see if there was a successful migration associated with the workflow id, store result in SUCCESS variable
-            SUCCESS = 1
-            if(( $SUCCESS==1 )); 
+            SUCCESS=$(curl --insecure  https://kvdb.io/${KVDB_BUCKET}/migration_<< parameters.Workflow_ID >>)
+            echo "$SUCCESS"
+            # Logic for reverting the database state
+            if (( $SUCCESS == 1 ));
             then
-            #  cd ~/project/backend
-            #  npm install
-            #  Add revert code here. You can find this in the Getting Started section.
-              exit 1
+              cd ~/project/backend
+              npm install
+              npm run migration:revert
             fi
             
 jobs:
@@ -156,11 +176,9 @@ jobs:
           root: ~/
           paths:
             - project/.circleci/ansible/inventory.txt
-
-      # Here's where you will add some code to rollback on failure      
-
-
-
+      
+      - destroy_environment
+      - revert-migrations
 
   configure-infrastructure:
     docker:
@@ -188,8 +206,8 @@ jobs:
             ls
             ansible-playbook -i inventory.txt configure-server.yml
 
-            
-      # Here's where you will add some code to rollback on failure      
+      - destroy_environment
+      - revert-migrations     
 
   run-migrations:
     docker:
@@ -212,9 +230,11 @@ jobs:
           command: |
             if grep -q "has been executed successfully." ~/project/backend/migrations_dump.txt
             then
-                curl https://kvdb.io/Kj46yPeom5ecCE1vbPLGX1/migration_${CIRCLE_WORKFLOW_ID:0:7}  -d '1'
+                curl https://kvdb.io/${KVDB_BUCKET}/migration_${CIRCLE_WORKFLOW_ID:0:7}  -d '1'
             fi
-     # Here's where you will add some code to rollback on failure      
+      - destroy_environment
+      - revert-migrations    
+           
 
 
   deploy-frontend:
@@ -242,7 +262,8 @@ jobs:
             npm run build
             tar -czvf artifact-"${CIRCLE_WORKFLOW_ID:0:7}".tar.gz dist
             aws s3 cp dist s3://udapeople-${CIRCLE_WORKFLOW_ID:0:7} --recursive
-      # Here's where you will add some code to rollback on failure      
+      - destroy_environment 
+      - revert-migrations     
   deploy-backend:
     docker:
       - image: yosefadel/aws-node
@@ -277,7 +298,8 @@ jobs:
             ls ../.circleci/ansible/roles/deploy/
             cd ../.circleci/ansible
             ansible-playbook -i inventory.txt deploy-backend.yml
-      # Here's where you will add some code to rollback on failure  
+      - destroy_environment
+      - revert-migrations
 
 
 
@@ -296,7 +318,10 @@ jobs:
       - run:
           name: Backend smoke test.
           command: |
-            export BACKEND_IP=$(aws ec2 describe-instances --region us-east-1 --query 'Reservations[*].Instances[*].PublicIpAddress' --output text)
+            export BACKEND_IP=$(aws ec2 describe-instances \
+              --filters "Name=tag:Name,Values=backend-${CIRCLE_WORKFLOW_ID:0:7}" \
+              --query 'Reservations[*].Instances[*].PublicIpAddress' \
+              --output text)
             export API_URL="http://${BACKEND_IP}:3030"
             echo "${API_URL}"
             if curl "${API_URL}/api/status" | grep "ok"
@@ -316,7 +341,8 @@ jobs:
             else
               exit 1
             fi
-      # Here's where you will add some code to rollback on failure  
+      - destroy_environment  
+      - revert-migrations
 
 
 

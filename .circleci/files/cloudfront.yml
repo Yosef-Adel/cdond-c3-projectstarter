@@ -31,14 +31,6 @@ Resources:
             QueryString: False
           TargetOriginId: webpage
           ViewerProtocolPolicy: allow-all
-          AllowedMethods:
-          - GET
-          - HEAD
-          - POST
-          - PUT
-          - PATCH
-          - OPTIONS
-          - DELETE
 
 Outputs:
   WorkflowID:

@@ -331,16 +331,10 @@ jobs:
 
   cloudfront-update:
     docker:
-      - image: amazon/aws-cli
+      - image: yosefadel/aws-node
     steps:
       - checkout
-      - run:
-          name: Install dependencies
-          command: |
-            curl -sL https://rpm.nodesource.com/setup_lts.x | bash -
-            yum -y install nodejs
-            yum -y install tar
-            yum -y install gzip
+     
       - run:
           name: Keep old WorkflowID in Kvdb for cleanup job
           working_directory: ./.circleci/files

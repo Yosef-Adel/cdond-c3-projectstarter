@@ -365,7 +365,6 @@ jobs:
         - run:
             name: Get old stack workflow id
             command: |
-              # your code here
               export OldWorkflowID=$(curl --insecure https://kvdb.io/${KVDB_BUCKET}/old_workflow_id)
               export STACKS=($(aws cloudformation list-stacks \
                   --query "StackSummaries[*].StackName" \

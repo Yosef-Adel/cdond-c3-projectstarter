@@ -32,7 +32,6 @@ commands:
           when: on_fail
           command: |
             SUCCESS=$(curl --insecure  https://kvdb.io/${KVDB_BUCKET}/migration_${CIRCLE_WORKFLOW_ID:0:7})
-            echo "$SUCCESS"
             # Logic for reverting the database state
             if [[ "${SUCCESS}" == "1" ]];
             then
@@ -318,7 +317,7 @@ jobs:
           command: |
             URL="http://udapeople-${CIRCLE_WORKFLOW_ID:0:7}.s3-website-us-east-1.amazonaws.com/#/employees"            
             echo ${URL} 
-            if curl -s ${URL} | grep "Welcome"
+            if curl -s ${URL} | grep "Wlcome"
             then
               exit 0
             else
@@ -331,27 +330,40 @@ jobs:
 
 
   cloudfront-update:
-    docker:
-      - image: yosefadel/aws-node
+   docker:
+      - image: amazon/aws-cli
     steps:
       - checkout
       - run:
-          name: Save Old Workflow ID to kvdb.io
+          name: Install dependencies
           command: |
-            export OLD_WORKFLOW_ID=$(aws cloudformation \
-                      list-exports --query "Exports[?Name==\`WorkflowID\`].Value" \
-                      --no-paginate --output text)
-            curl -k https://kvdb.io/${KVDB_BUCKET}/old_workflow_id -d "${OLD_WORKFLOW_ID}"
+            curl -sL https://rpm.nodesource.com/setup_lts.x | bash -
+            yum -y install nodejs
+            yum -y install tar
+            yum -y install gzip
+      - run:
+          name: Keep old WorkflowID in Kvdb for cleanup job
+          working_directory: ./.circleci/files
+          command: |
+            export OldWorkflowID=$(aws cloudformation \
+              list-exports --query "Exports[?Name==\`WorkflowID\`].Value" \
+              --no-paginate --output text)
+            curl  -k "https://kvdb.io/64opv7eEB4xFvEfRFmpEHH/udacity" -d "$OldWorkflowID"
+  
       - run:
           name: Update cloudfront distribution
+          no_output_timeout: 30m
           command: |
+            pwd
+            ls -la
             aws cloudformation deploy \
-              --template-file .circleci/files/cloudfront.yml \
+              --template-file ".circleci/files/cloudfront.yml" \
+              --stack-name InitialStack \
               --parameter-overrides WorkflowID="${CIRCLE_WORKFLOW_ID:0:7}" \
-              --stack-name InitialStack
-              
-      - destroy-environment
-      - revert-migrations   
+              --tags Project=udapeople
+      - destroy-environment:
+      - revert-migrations:
+          
 
 
 
